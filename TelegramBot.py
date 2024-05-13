@@ -135,7 +135,6 @@ def addWalletActions(m):
        # Print the status code and the response body
        print(response.status_code)
        if response.status_code == 200:
-          addTokenDb(gdata, genv)
           bot.send_message(cid, 'Wallet agregada : ' + valor.lower(), parse_mode='Markdown', reply_markup=markup)
        else:    
           bot.send_message(cid, "Error agregando Wallet", parse_mode='Markdown', reply_markup=markup)
@@ -188,7 +187,6 @@ def deleteWalletActions(m):
        # Print the status code and the response body
        print(response.status_code)
        if response.status_code == 200:
-          addTokenDb(gdata, genv)
           bot.send_message(cid, 'Wallet agregada : ' + valor.lower(), parse_mode='Markdown', reply_markup=markup)
        else:    
           bot.send_message(cid, "Error agregando Wallet", parse_mode='Markdown', reply_markup=markup)
