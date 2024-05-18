@@ -1,5 +1,8 @@
 
 import requests, json, os, telebot, sys
+from dotenv import load_dotenv
+load_dotenv()
+API_TOKEN = os.getenv("API_TOKEN")
 
 def type_err(estatus):
     if estatus in [401, 402, 403, 407, 423, 451]:
@@ -175,7 +178,7 @@ def verify_transactions():
         active_transactions = get_transactions()
         
         if active_transactions:
-            bot = telebot.TeleBot("6683045934:AAFcupOm_6sKHt_Lk9QS3O2j8SBdJUOJHfU")
+            bot = telebot.TeleBot(API_TOKEN)
             
             list_wallet_bot = requests.post("https://nearp2p.com/wallet-p2p/walletbot/list_wallet_bot", headers = {'Content-type': 'application/json'}).json().get("data")
             
