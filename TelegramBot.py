@@ -3,36 +3,30 @@ from dotenv import load_dotenv
 import telebot
 from telebot import types
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-import sys
-print(sys.path)
 import requests
 import json
-#loading trader
-#import tradernew
 
 # loading the .env file
 load_dotenv()
 
 
 # Telegram Bot
-API_TOKEN = os.getenv("API_TOKEN")
-
-
-bot = telebot.TeleBot(API_TOKEN)
+bot = telebot.TeleBot(os.getenv("API_TOKEN"))
 ########################################################################################################
 ###############################Operaciones para manejar en el Bot#######################################
 ########################################################################################################
+
 # only used for console output now
 def listener(messages):
-   """
-   When new messages arrive TeleBot will call this function.
-   """
-   for m in messages:
-       if m.content_type == 'text':
-           # print the sent message to the console
-           print(str(m.chat.first_name) + " [" + str(m.chat.id) + "]: " + m.text)
+    print(messages)
+    """
+    When new messages arrive TeleBot will call this function.
+    """
+    #    for m in messages:
+    #        if m.content_type == 'text':
+    #            print(str(m.chat.first_name) + " [" + str(m.chat.id) + "]: " + m.text)
 
-   bot.set_update_listener(listener)  # register listener            
+    bot.set_update_listener(listener)  # register listener
 
 
 # Comando inicio
@@ -61,14 +55,14 @@ def command_list(m):
     buttons = [[button1], [button2], [button3]]
 
     # Create the keyboard markup
-    reply_markup = InlineKeyboardMarkup(buttons)             
+    reply_markup = InlineKeyboardMarkup(buttons)
     bot.send_message(cid, help_text, reply_markup=reply_markup)
 
 
 # Callback_Handler
-# This code creates a dictionary called options that maps the call.data to the corresponding function. 
+# This code creates a dictionary called options that maps the call.data to the corresponding function.
 # The get() method is used to retrieve the function based on the call.data. If the function exists
-# , it is called passing the call.message as argument. 
+# , it is called passing the call.message as argument.
 # This approach avoids the need to use if statements to check the value of call.data for each possible option.
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
@@ -84,7 +78,7 @@ def callback_handler(call):
 
     # Call the function if it exists
     if func:
-        func(call.message)    
+        func(call.message)
 
 def addWallet(m):
     """
@@ -120,11 +114,10 @@ def addWalletActions(m):
        item = types.KeyboardButton('/list')
        markup.row(item)
        bot.send_message(cid, 'Seleccione una opción', parse_mode='Markdown', reply_markup=markup)
-    else:   
+    else:
        markup = types.ReplyKeyboardMarkup()
        item = types.KeyboardButton('/list')
        markup.row(item)
-       print(str(cid), valor.lower())
        url = "https://nearp2p.com/wallet-p2p/walletbot/add_wallet_bot"
        data = {
             "idtelegram": str(cid),
@@ -133,10 +126,9 @@ def addWalletActions(m):
        headers = {'Content-type': 'application/json'}
        response = requests.post(url, data=json.dumps(data), headers=headers)
        # Print the status code and the response body
-       print(response.status_code)
        if response.status_code == 200:
           bot.send_message(cid, 'Wallet agregada : ' + valor.lower(), parse_mode='Markdown', reply_markup=markup)
-       else:    
+       else:
           bot.send_message(cid, "Error agregando Wallet", parse_mode='Markdown', reply_markup=markup)
 
 def deleteWallet(m):
@@ -173,7 +165,7 @@ def deleteWalletActions(m):
        item = types.KeyboardButton('/list')
        markup.row(item)
        bot.send_message(cid, 'Seleccione una opción', parse_mode='Markdown', reply_markup=markup)
-    else:   
+    else:
        markup = types.ReplyKeyboardMarkup()
        item = types.KeyboardButton('/list')
        markup.row(item)
@@ -185,10 +177,9 @@ def deleteWalletActions(m):
        headers = {'Content-type': 'application/json'}
        response = requests.post(url, data=json.dumps(data), headers=headers)
        # Print the status code and the response body
-       print(response.status_code)
        if response.status_code == 200:
           bot.send_message(cid, 'Wallet agregada : ' + valor.lower(), parse_mode='Markdown', reply_markup=markup)
-       else:    
+       else:
           bot.send_message(cid, "Error agregando Wallet", parse_mode='Markdown', reply_markup=markup)
 
 
@@ -209,12 +200,9 @@ def listWallets(m):
     }
     headers = {'Content-type': 'application/json'}
     response = requests.post(url, data=json.dumps(data), headers=headers)
-    
-    # Print the status code and the response body
-    # print("Status code:", response.status_code)
+
     response_data = response.json()
-    # print("Response data:", response_data)
-    
+
     bot.send_message(cid, "Lista de wallets agregadas:", parse_mode='Markdown')
     if 'data' in response_data:
         for item in response_data['data']:
@@ -223,9 +211,9 @@ def listWallets(m):
         print("No 'data' in response")
     markup = types.ReplyKeyboardMarkup()
     item = types.KeyboardButton('/list')
-    markup.row(item)  
+    markup.row(item)
     bot.send_message(cid, "Hecho..", reply_markup=markup)
-              
+
 
 # default handler for every other text
 @bot.message_handler(func=lambda message: True, content_types=['text'])
@@ -234,6 +222,6 @@ def command_default(m):
     markup = types.ReplyKeyboardMarkup()
     iteme = types.KeyboardButton('/list')
     markup.row(iteme)
-    bot.send_message(m.chat.id, "Does not understand \"" + m.text + "\"\n , try with \n \n /list" , reply_markup=markup)        
+    bot.send_message(m.chat.id, "Does not understand \"" + m.text + "\"\n , try with \n \n /list" , reply_markup=markup)
 
-bot.polling()     
+bot.infinity_polling()
