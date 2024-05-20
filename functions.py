@@ -2,7 +2,7 @@
 import requests, json, os, telebot, sys
 from dotenv import load_dotenv
 load_dotenv()
-API_TOKEN = os.getenv("API_TOKEN")
+API_TOKEN = str(os.getenv("API_TOKEN"))
 
 def type_err(estatus):
     if estatus in [401, 402, 403, 407, 423, 451]:

@@ -18,7 +18,6 @@ bot = telebot.TeleBot(os.getenv("API_TOKEN"))
 
 # only used for console output now
 def listener(messages):
-    print(messages)
     """
     When new messages arrive TeleBot will call this function.
     """
