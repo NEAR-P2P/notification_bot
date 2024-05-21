@@ -143,6 +143,7 @@ def verify_transactions():
     try:
         active_transactions = get_transactions()
         list_wallet_bot = []
+        bot = None
         
         if active_transactions.get("ordersells") or active_transactions.get("orderbuys"):
             bot = telebot.TeleBot(API_TOKEN)
@@ -161,6 +162,9 @@ def verify_transactions():
                 
         pendings = get_all()
         if len(pendings) > 0: # verify_historical_sells or verify_historical_buys
+            if not bot:
+                bot = telebot.TeleBot(API_TOKEN)
+            
             if len(list_wallet_bot) == 0:
                 list_wallet_bot = requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
             
