@@ -2,7 +2,7 @@
 import requests, json, os, telebot, sys
 from dotenv import load_dotenv
 load_dotenv()
-API_TOKEN = str(os.getenv("API_TOKEN"))
+API_TOKEN = os.getenv("API_TOKEN")
 
 def type_err(estatus):
     if estatus in [401, 402, 403, 407, 423, 451]:
@@ -183,11 +183,11 @@ def verify_transactions():
         
 def generate_msg_hist(order_id, name, to_modify, tipo):
     if to_modify == 3:
-        return f"Su orden de {tipo} N°{order_id} de la wallet {name} ha entrado en disputa, por favor verificar o contactar a soporte https://t.me/nearp2p."
+        return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha entrado en disputa, por favor verificar o contactar a soporte https://t.me/nearp2p."
     elif to_modify == 4:
-        return f"Su orden de {tipo} N°{order_id} de la wallet {name} ha sido cancelada."
+        return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha sido cancelada."
     
-    return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} de la wallet {name} ha finalizado con éxito."
+    return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha entrado en disputa, por favor verificar o contactar a soporte.\n\n https://t.me/nearp2p."
 
 def generate_msg_new(order_id, name, tipo):
-    return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para {name} por favor verificar."
+    return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para **{name}** por favor verificar."
