@@ -1,10 +1,13 @@
-import time
+import asyncio
 from functions import verify_transactions
 
-def app_notifications():
+async def app_notifications():
     while True:
-        verify_transactions()
-        time.sleep(20)
+        try:
+            await verify_transactions()
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            await asyncio.sleep(2)  # wait for 1 second before retrying
 
 if __name__ == "__main__":
-    app_notifications()
+    asyncio.run(app_notifications())
