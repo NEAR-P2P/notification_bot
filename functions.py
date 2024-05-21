@@ -47,37 +47,6 @@ class ActiveTransactions():
         json.dump(actives, save_file, indent = 4)
         save_file.close()
         
-        # actives = open("active_transactions.txt", "r+")
-        # data_into_list = actives.readlines()
-        # linea = None
-        # for i, obj in enumerate(data_into_list):
-        #     obj = json.loads(obj)
-        #     if obj['order_id'] == new_obj['order_id'] and obj['tipo'] == new_obj['tipo']:
-        #         self.new = False
-        #         linea = (i, obj['estado'], new_obj['estado'], new_obj.get("historical"))
-        
-        # if linea != None and linea[1] != linea[2] and not linea[3]:
-        #     data_into_list[linea[0]] = json.dumps(new_obj)+("\n" if len(data_into_list) > 0 else "")
-        #     actives.truncate(0)
-        #     actives.seek(0)
-        #     actives.writelines(data_into_list)
-        #     self.modify = True
-            
-        # elif linea != None and linea[3]:
-        #     self.finnish = True
-        #     del data_into_list[linea[0]]
-        #     actives.truncate(0)
-        #     if data_into_list:
-        #         actives.seek(0)
-        #         actives.writelines(data_into_list)
-            
-        # if self.new:
-        #     new_data = actives.readlines()
-        #     actives.write(("\n" if len(data_into_list) > 0 else "")+json.dumps(new_obj))
-        
-        
-        # actives.close()
-        
 def get_all():
     objs = []
     try: actives = json.load(open("json_transactions.json", "r"))
@@ -159,7 +128,7 @@ def get_transactions():
     }
     """
 
-    return requests.post("https://api.thegraph.com/subgraphs/name/hrpalencia/p2p", headers={'Content-Type': 'application/json'}, json={'query': query}).json().get("data")
+    return requests.post(os.getenv("URL_SUBGRAPHS_P2P"), headers={'Content-Type': 'application/json'}, json={'query': query}).json().get("data")
 
 def get_historical(pendings):
     query_hs = set_query(pendings, "sell")
@@ -171,7 +140,7 @@ def get_historical(pendings):
         %s
     }
     """%(query_hs, query_hb)
-    return requests.post("https://api.thegraph.com/subgraphs/name/hrpalencia/p2p", headers={'Content-Type': 'application/json'}, json={'query': query.replace("'", "\"")}).json().get("data")
+    return requests.post(os.getenv("URL_SUBGRAPHS_P2P"), headers={'Content-Type': 'application/json'}, json={'query': query.replace("'", "\"")}).json().get("data")
 
 def verify_transactions():
     try:
@@ -180,7 +149,7 @@ def verify_transactions():
         if active_transactions:
             bot = telebot.TeleBot(API_TOKEN)
             
-            list_wallet_bot = requests.post("https://nearp2p.com/wallet-p2p/walletbot/list_wallet_bot", headers = {'Content-type': 'application/json'}).json().get("data")
+            list_wallet_bot = requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
             
             notify_new_transaction = []
             
@@ -218,4 +187,4 @@ def generate_msg_hist(order_id, name, to_modify, tipo):
     return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} de la wallet {name} ha finalizado con éxito."
 
 def generate_msg_new(order_id, name, tipo):
-    return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para {name} por favor verificar." 
+    return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para {name} por favor verificar."

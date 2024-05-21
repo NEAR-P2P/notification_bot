@@ -117,7 +117,7 @@ def addWalletActions(m):
        markup = types.ReplyKeyboardMarkup()
        item = types.KeyboardButton('/list')
        markup.row(item)
-       url = "https://nearp2p.com/wallet-p2p/walletbot/add_wallet_bot"
+       url = os.getenv("URL_ADD_WALLET_BOT")
        data = {
             "idtelegram": str(cid),
             "walletname": valor.lower()
@@ -168,7 +168,7 @@ def deleteWalletActions(m):
        markup = types.ReplyKeyboardMarkup()
        item = types.KeyboardButton('/list')
        markup.row(item)
-       url = "https://nearp2p.com/wallet-p2p/walletbot/delete_wallet_bot"
+       url = os.getenv("URL_DELETE_WALLET_BOT")
        data = {
             "idtelegram": str(cid),
             "walletname": valor.lower()
@@ -193,7 +193,7 @@ def listWallets(m):
         None
     """
     cid = m.chat.id
-    url = "https://nearp2p.com/wallet-p2p/walletbot/list_wallet_bot"
+    url = os.getenv("URL_LIST_WALLET_BOT")
     data = {
         "idtelegram": str(cid)
     }
