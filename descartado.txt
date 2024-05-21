@@ -1,0 +1,73 @@
+
+# import asyncio
+# import aiohttp
+# from concurrent.futures import ThreadPoolExecutor
+
+# def verify_transactions():
+#     try:
+#         active_transactions = get_transactions()
+        
+#         if active_transactions:
+#             bot = telebot.TeleBot(API_TOKEN)
+            
+#             list_wallet_bot = requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
+            
+#             notify_new_transaction = []
+            
+#             add_transactions(active_transactions.get("ordersells") or [], list_wallet_bot, notify_new_transaction, "sell")
+#             add_transactions(active_transactions.get("orderbuys") or [], list_wallet_bot, notify_new_transaction, "buy")
+
+#             print("Hola")
+            
+#             with ThreadPoolExecutor() as executor:
+#                 for wallets in notify_new_transaction:
+#                     tipo = 'venta' if wallets['tipo'] == 'sell' else 'compra'
+#                     if wallets.get("chat_owner"):
+#                         executor.submit(bot.send_message, chat_id = wallets["chat_owner"], text = generate_msg_new(wallets.get("order_id"), wallets['wallet_owner'], tipo))
+#                     if wallets.get("chat_signer"): executor.submit(bot.send_message, chat_id = wallets["chat_signer"], text = generate_msg_new(wallets.get("order_id"), wallets['wallet_signer'], tipo))
+                
+#             pendings = get_all()
+#             if len(pendings) > 0: # verify_historical_sells or verify_historical_buys
+                
+#                 historical_transactions = get_historical(pendings)
+#                 notify_update_transaction = []
+#                 if historical_transactions:
+                    
+#                     add_historical(historical_transactions.get("orderhistorysells") or [], list_wallet_bot, notify_update_transaction, "sell")
+#                     add_historical(historical_transactions.get("orderhistorybuys") or [], list_wallet_bot, notify_update_transaction, "buy")
+                    
+#                 with ThreadPoolExecutor() as executor:
+#                     for wallets in notify_update_transaction:
+#                         tipo = 'venta' if wallets['tipo'] == 'sell' else 'compra'
+#                         if wallets["chat_owner"]: executor.submit(bot.send_message, chat_id = wallets["chat_owner"], text = generate_msg_hist(wallets.get("order_id"), wallets["wallet_owner"], wallets.get("modify_to"), tipo))
+#                         if wallets["chat_signer"]: executor.submit(bot.send_message, chat_id = wallets["chat_signer"], text = generate_msg_hist(wallets.get("order_id"), wallets['wallet_signer'], wallets.get("modify_to"), tipo))
+                    
+#     except: generate_err(sys.exc_info())
+
+def set_query(pendings, tipo):
+    orders_ids = lambda x: [y.get("order_id") for y in x]
+    
+    query = ""
+    verify_historical = orders_ids(filter_transactions("tipo", tipo, pendings))
+    if verify_historical:
+        where = "_in: %s"%(verify_historical) if len(verify_historical)>1 else f": \"{verify_historical[0]}\""
+        query = """
+        """%(where)
+    return query_hb
+
+    query_hs = set_query(pendings, "sell")
+    query_hb = set_query(pendings, "buy")
+
+                historical_transactions = get_historical(pendings)
+                
+# def get_historical(pendings):
+#     query_hs = set_query(pendings, "sell")
+#     query_hb = set_query(pendings, "buy")
+    
+#     query = """
+#     query MyQuery {
+#         %s
+#         %s
+#     }
+#     """%(query_hs, query_hb)
+#     return requests.post(os.getenv("URL_SUBGRAPHS_P2P"), headers={'Content-Type': 'application/json'}, json={'query': query.replace("'", "\"")}).json().get("data")

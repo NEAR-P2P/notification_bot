@@ -92,25 +92,9 @@ def add_historical(historical_transactions, list_wallet_bot, notify_update_trans
             if obj.delete:
                 notify_update_transaction.append({"order_id": history["order_id"], "wallet_owner": historical_data_owner.get("wallet"), "chat_owner": historical_data_owner.get("telegram_chat"), "wallet_signer": historical_data_signer.get("wallet"), "chat_signer": historical_data_signer.get("telegram_chat"), "tipo": tipo, "modify_to": history.get("status")})
               
-      
-def set_query(pendings, tipo):
-    orders_ids = lambda x: [y.get("order_id") for y in x]
-    
-    query = ""
-    verify_historical = orders_ids(filter_transactions("tipo", tipo, pendings))
-    if verify_historical:
-        where = "_in: %s"%(verify_historical) if len(verify_historical)>1 else f": \"{verify_historical[0]}\""
-        query = """
-            orderhistorysells(where: {order_id%s}) { 
-                status
-                signer_id
-                owner_id
-                order_id
-            }
-        """%(where)
-    return query
 
 def get_transactions():
+    
     query = """
     query MyQuery {
         ordersells {
@@ -125,28 +109,42 @@ def get_transactions():
             signer_id
             status
         }
+        orderhistorysells { 
+            status
+            signer_id
+            owner_id
+            order_id
+        }
+        orderhistorybuys { 
+            status
+            signer_id
+            owner_id
+            order_id
+        }
     }
     """
 
     return requests.post(os.getenv("URL_SUBGRAPHS_P2P"), headers={'Content-Type': 'application/json'}, json={'query': query}).json().get("data")
 
-def get_historical(pendings):
-    query_hs = set_query(pendings, "sell")
-    query_hb = set_query(pendings, "buy")
-    
-    query = """
-    query MyQuery {
-        %s
-        %s
-    }
-    """%(query_hs, query_hb)
-    return requests.post(os.getenv("URL_SUBGRAPHS_P2P"), headers={'Content-Type': 'application/json'}, json={'query': query.replace("'", "\"")}).json().get("data")
+def filter_his(type, objects, all_pendings, retorno):
+    obj_by_type = lambda lista: [o.get("order_id") for o in lista if o['tipo'] == type]
+    pendings = obj_by_type(all_pendings)
+    for obj in objects:
+        if obj.get('order_id') in pendings:
+            retorno.append(obj)
 
+def get_historical(objects, all_pendings):
+    retorno = {"orderhistorysells": [], "orderhistorybuys": []}
+    filter_his("sell", objects.get("orderhistorysells"), all_pendings, retorno['orderhistorysells'])
+    filter_his("buy", objects.get("orderhistorybuys"), all_pendings, retorno['orderhistorybuys'])
+    return retorno
+    
 def verify_transactions():
     try:
         active_transactions = get_transactions()
+        list_wallet_bot = []
         
-        if active_transactions:
+        if active_transactions.get("ordersells") or active_transactions.get("orderbuys"):
             bot = telebot.TeleBot(API_TOKEN)
             
             list_wallet_bot = requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
@@ -161,27 +159,30 @@ def verify_transactions():
                 if wallets.get("chat_owner"): bot.send_message(chat_id = wallets["chat_owner"], text = generate_msg_new(wallets.get("order_id"), wallets['wallet_owner'], tipo))
                 if wallets.get("chat_signer"): bot.send_message(chat_id = wallets["chat_signer"], text = generate_msg_new(wallets.get("order_id"), wallets['wallet_signer'], tipo))
                 
-            pendings = get_all()
-            if len(pendings) > 0: # verify_historical_sells or verify_historical_buys
+        pendings = get_all()
+        if len(pendings) > 0: # verify_historical_sells or verify_historical_buys
+            if len(list_wallet_bot) == 0:
+                list_wallet_bot = requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
+            
+            historical_transactions = get_historical(active_transactions, pendings)
+            
+            notify_update_transaction = []
+            if historical_transactions:
                 
-                historical_transactions = get_historical(pendings)
-                notify_update_transaction = []
-                if historical_transactions:
-                    
-                    add_historical(historical_transactions.get("orderhistorysells") or [], list_wallet_bot, notify_update_transaction, "sell")
-                    add_historical(historical_transactions.get("orderhistorybuys") or [], list_wallet_bot, notify_update_transaction, "buy")
-                    
-                for wallets in notify_update_transaction:
-                    tipo = 'venta' if wallets['tipo'] == 'sell' else 'compra'
-                    if wallets["chat_owner"]: bot.send_message(chat_id = wallets["chat_owner"], text = generate_msg_hist(wallets.get("order_id"), wallets["wallet_owner"], wallets.get("modify_to"), tipo))
-                    if wallets["chat_signer"]: bot.send_message(chat_id = wallets["chat_signer"], text = generate_msg_hist(wallets.get("order_id"), wallets['wallet_signer'], wallets.get("modify_to"), tipo))
+                add_historical(historical_transactions.get("orderhistorysells") or [], list_wallet_bot, notify_update_transaction, "sell")
+                add_historical(historical_transactions.get("orderhistorybuys") or [], list_wallet_bot, notify_update_transaction, "buy")
+                
+            for wallets in notify_update_transaction:
+                tipo = 'venta' if wallets['tipo'] == 'sell' else 'compra'
+                if wallets["chat_owner"]: bot.send_message(chat_id = wallets["chat_owner"], text = generate_msg_hist(wallets.get("order_id"), wallets["wallet_owner"], wallets.get("modify_to"), tipo))
+                if wallets["chat_signer"]: bot.send_message(chat_id = wallets["chat_signer"], text = generate_msg_hist(wallets.get("order_id"), wallets['wallet_signer'], wallets.get("modify_to"), tipo))
                     
     except: generate_err(sys.exc_info())
-
+        
 def generate_msg_hist(order_id, name, to_modify, tipo):
     if to_modify == 3:
         return f"Su orden de {tipo} N°{order_id} de la wallet {name} ha entrado en disputa, por favor verificar o contactar a soporte https://t.me/nearp2p."
-    elif to_modify == 2:
+    elif to_modify == 4:
         return f"Su orden de {tipo} N°{order_id} de la wallet {name} ha sido cancelada."
     
     return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} de la wallet {name} ha finalizado con éxito."

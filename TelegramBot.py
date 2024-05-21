@@ -211,7 +211,7 @@ def listWallets(m):
     markup = types.ReplyKeyboardMarkup()
     item = types.KeyboardButton('/list')
     markup.row(item)
-    bot.send_message(cid, "Hecho..", reply_markup=markup)
+    bot.send_message(cid, "Hecho.", reply_markup=markup)
 
 
 # default handler for every other text
