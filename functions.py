@@ -119,7 +119,9 @@ async def subscribe_to_field(ws_url, query, field, callback):
                         for item in result[field]:
                             order_id = item.get('order_id')
                             status = item.get('status')
-                            callback(order_id, status)
+                            signer_id = item.get('signer_id')
+                            owner_id = item.get('owner_id')
+                            callback(field, order_id, status, signer_id, owner_id)
         except ConnectionClosedError as e:
             print(f"Connection closed with error: {e}. Reconnecting...")
             await asyncio.sleep(1)  # Wait before retrying
@@ -177,8 +179,8 @@ async def get_transactions(callback):
     tasks = [subscribe_to_field(ws_url, queries[field], field, callback) for field in queries]
     await asyncio.gather(*tasks)
 
-def handle_update(order_id, status):
-    print(f"Order ID: {order_id}, Status: {status}")
+def handle_update(source, order_id, status, signer_id, owner_id):
+    print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
 
 async def verify_transactions():
     try:
