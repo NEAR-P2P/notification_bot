@@ -244,6 +244,7 @@ async def get_transactions(callback):
 
 # handle update read the session variables and filter the order_id to search in history or actual
 # is the function thta will send the message to the bot
+# Angel --------------------------------- Here handle the message bot
 def handle_update(source, order_id, status, signer_id, owner_id):
     """
     Handle an update for a given order.
