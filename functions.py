@@ -98,10 +98,10 @@ def add_historical(historical_transactions, list_wallet_bot, notify_update_trans
               
 # Initialize a session dictionary with lists
 varsession = {
-    'ordersells': [],
-    'orderbuys': [],
-    'orderhistorysells': [],
-    'orderhistorybuys': [],
+    'ordersells': set(),
+    'orderbuys': set(),
+    'orderhistorysells': set(),
+    'orderhistorybuys': set(),
 }
 
 # web socket handle
@@ -157,6 +157,7 @@ async def subscribe_to_field(ws_url, query, field, callback):
             client = Client(transport=transport, fetch_schema_from_transport=False)
 
             async with client as session:
+                notifications = []
                 async for result in session.subscribe(query):
                     if field in result:
                         for item in result[field]:
@@ -165,8 +166,33 @@ async def subscribe_to_field(ws_url, query, field, callback):
                             signer_id = item.get('signer_id')
                             owner_id = item.get('owner_id')
                             # Append the order_id to the appropriate list in the session variable
-                            varsession[field].append(order_id)
-                            callback(field, order_id, status, signer_id, owner_id)
+                            try:
+                                add, end = callback(field, order_id)
+                                if add or not end in [None, False]: notifications.append({"type": field, "order_id": order_id, "status": status, "signer_id": signer_id, "owner_id": owner_id})
+                                if add: varsession[field].add(str(order_id))
+                                if not end in [None, False]: varsession[field].remove(end)
+                            except: generate_err(sys.exc_info())
+                            
+                    print(varsession)
+                    if len(notifications) > 0:
+                        wallets = get_chat_id_tg()
+                        for users in notifications:
+                            
+                            tipo = users.get("type")
+                            generator = generate_msg_hist if "history" in tipo else generate_msg_new
+                            if tipo in ["ordersells", "orderhistorysells"]: tipo = "venta"
+                            elif tipo in ["orderbuys", "orderhistorybuys"]: tipo = "compra"
+                            
+                            data_users = []
+                            for wallet in wallets:
+                                if wallet.get("walletname") in [users.get("owner_id"), users.get("signer_id")]:
+                                    data_users.append(wallet)
+                                    
+                            bot = telebot.TeleBot(API_TOKEN)
+                            for user in data_users:
+                                bot.send_message(chat_id = user.get("idtelegram"), text = generator(order_id, user.get("walletname"), users.get("status"), tipo))
+                        
+                            
         except ConnectionClosedError as e:
             # print(f"Connection closed with error: {e}. Reconnecting...")
             await asyncio.sleep(1)  # Wait before retrying
@@ -242,32 +268,57 @@ async def get_transactions(callback):
     tasks = [subscribe_to_field(ws_url, queries[field], field, callback) for field in queries]
     await asyncio.gather(*tasks)
 
+def get_chat_id_tg():
+    try: return requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
+    except: return []
+    
 # handle update read the session variables and filter the order_id to search in history or actual
 # is the function thta will send the message to the bot
 # Angel --------------------------------- Here handle the message bot
-def handle_update(source, order_id, status, signer_id, owner_id):
-    """
-    Handle an update for a given order.
+def handle_update(source, order_id):
+    try: 
+        """
+        Handle an update for a given order.
 
-    Args:
-        source (str): The source of the update.
-        order_id (str): The ID of the order.
-        status (str): The status of the order.
-        signer_id (str): The ID of the signer.
-        owner_id (str): The ID of the owner.
+        Args:
+            source (str): The source of the update.
+            order_id (str): The ID of the order.
+            status (str): The status of the order.
+            signer_id (str): The ID of the signer.
+            owner_id (str): The ID of the owner.
 
-    Returns:
-        None
-    """
-    # Assuming session is a global variable
-    global varsession
-
-    # Check if the order_id exists in the history sell and history buys
-    if source in ['orderhistorysells', 'orderhistorybuys']:
-        if order_id in varsession['ordersells'] or order_id in varsession['orderbuys']:
-            print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
-    elif source in ['ordersells', 'orderbuys']:
-        print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
+        Returns:
+            None
+        """
+        # Assuming session is a global variable
+        global varsession
+        
+        add = False
+        end = None
+        
+        # Check if the order_id exists in the history sell and history buys
+        if source == 'orderhistorysells':
+            try:
+                indice = list(varsession['ordersells']).index(order_id)
+                if indice: end = indice
+            except: pass
+        
+        elif source == 'orderhistorybuys':
+            try:
+                indice = list(varsession['orderbuys']).index(order_id)
+                if indice: end = indice
+            except: pass
+                    
+        elif source == 'ordersells':
+            try: indice = list(varsession['ordersells']).index(order_id)
+            except: add = True
+            
+        elif source == 'orderbuys':
+            try: indice = list(varsession['orderbuys']).index(order_id)
+            except: add = True
+        
+        return add, end
+    except Exception as e: raise Exception(e)
         
 # def to verify the transaction        
 async def verify_transactions():
@@ -295,57 +346,14 @@ def get_historical(objects, all_pendings):
     filter_his("sell", objects.get("orderhistorysells"), all_pendings, retorno['orderhistorysells'])
     filter_his("buy", objects.get("orderhistorybuys"), all_pendings, retorno['orderhistorybuys'])
     return retorno
-    
-# def verify_transactions():
-#     try:
-#         active_transactions = get_transactions()
-#         list_wallet_bot = []
         
-#         if active_transactions.get("ordersells") or active_transactions.get("orderbuys"):
-#             bot = telebot.TeleBot(API_TOKEN)
-            
-#             list_wallet_bot = requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
-            
-#             notify_new_transaction = []
-            
-#             add_transactions(active_transactions.get("ordersells") or [], list_wallet_bot, notify_new_transaction, "sell")
-#             add_transactions(active_transactions.get("orderbuys") or [], list_wallet_bot, notify_new_transaction, "buy")
-
-#             for wallets in notify_new_transaction:
-#                 tipo = 'venta' if wallets['tipo'] == 'sell' else 'compra'
-#                 if wallets.get("chat_owner"): bot.send_message(chat_id = wallets["chat_owner"], text = generate_msg_new(wallets.get("order_id"), wallets['wallet_owner'], tipo))
-#                 if wallets.get("chat_signer"): bot.send_message(chat_id = wallets["chat_signer"], text = generate_msg_new(wallets.get("order_id"), wallets['wallet_signer'], tipo))
-                
-#         pendings = get_all()
-#         if len(pendings) > 0: # verify_historical_sells or verify_historical_buys
-#             bot = telebot.TeleBot(API_TOKEN)
-            
-#             if len(list_wallet_bot) == 0:
-#                 list_wallet_bot = requests.post(os.getenv("URL_LIST_WALLET_BOT"), headers = {'Content-type': 'application/json'}).json().get("data")
-            
-#             historical_transactions = get_historical(active_transactions, pendings)
-            
-#             notify_update_transaction = []
-#             if historical_transactions:
-                
-#                 add_historical(historical_transactions.get("orderhistorysells") or [], list_wallet_bot, notify_update_transaction, "sell")
-#                 add_historical(historical_transactions.get("orderhistorybuys") or [], list_wallet_bot, notify_update_transaction, "buy")
-                
-#             for wallets in notify_update_transaction:
-#                 tipo = 'venta' if wallets['tipo'] == 'sell' else 'compra'
-#                 if wallets["chat_owner"]: bot.send_message(chat_id = wallets["chat_owner"], text = generate_msg_hist(wallets.get("order_id"), wallets["wallet_owner"], wallets.get("modify_to"), tipo))
-#                 if wallets["chat_signer"]: bot.send_message(chat_id = wallets["chat_signer"], text = generate_msg_hist(wallets.get("order_id"), wallets['wallet_signer'], wallets.get("modify_to"), tipo))
-                    
-#     except: generate_err(sys.exc_info())
-
-        
-def generate_msg_hist(order_id, name, to_modify, tipo):
-    if to_modify == 3:
+def generate_msg_hist(order_id, name, status, tipo):
+    if status == 3:
         return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha entrado en disputa, por favor verificar o contactar a soporte https://t.me/nearp2p."
-    elif to_modify == 4:
+    elif status == 4:
         return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha sido cancelada."
     
     return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha entrado en disputa, por favor verificar o contactar a soporte.\n\n https://t.me/nearp2p."
 
-def generate_msg_new(order_id, name, tipo):
+def generate_msg_new(order_id, name, status, tipo):
     return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para **{name}** por favor verificar."
