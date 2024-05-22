@@ -104,6 +104,7 @@ varsession = {
     'orderhistorybuys': [],
 }
 
+# web socket handle
 def get_websocket_url(http_url):
     if http_url.startswith("https://"):
         return http_url.replace("https://", "wss://")
@@ -112,6 +113,8 @@ def get_websocket_url(http_url):
     else:
         raise ValueError("Invalid URL scheme. Must be http or https.")
 
+# suscribe where the graphql query is the subscription and the field is the key of the result
+# storing in a session variable
 async def subscribe_to_field(ws_url, query, field, callback):
     while True:
         try:
@@ -136,6 +139,7 @@ async def subscribe_to_field(ws_url, query, field, callback):
             print(f"An error occurred: {e}")
             await asyncio.sleep(1)  # Wait before retrying
 
+# graphql to get the transactions
 async def get_transactions(callback):
     http_url = os.getenv("URL_SUBGRAPHS_P2P")
     ws_url = get_websocket_url(http_url)
@@ -186,6 +190,8 @@ async def get_transactions(callback):
     tasks = [subscribe_to_field(ws_url, queries[field], field, callback) for field in queries]
     await asyncio.gather(*tasks)
 
+# handle update read the session variables and filter the order_id to search in history or actual
+# is the function thta will send the message to the bot
 def handle_update(source, order_id, status, signer_id, owner_id):
     # Assuming session is a global variable
     global varsession
@@ -197,6 +203,7 @@ def handle_update(source, order_id, status, signer_id, owner_id):
     elif source in ['ordersells', 'orderbuys']:
         print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
         
+# def to verify the transaction        
 async def verify_transactions():
     try:
         await get_transactions(handle_update)
