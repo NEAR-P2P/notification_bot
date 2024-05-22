@@ -96,7 +96,13 @@ def add_historical(historical_transactions, list_wallet_bot, notify_update_trans
             if obj.delete:
                 notify_update_transaction.append({"order_id": history["order_id"], "wallet_owner": historical_data_owner.get("wallet"), "chat_owner": historical_data_owner.get("telegram_chat"), "wallet_signer": historical_data_signer.get("wallet"), "chat_signer": historical_data_signer.get("telegram_chat"), "tipo": tipo, "modify_to": history.get("status")})
               
-
+# Initialize a session dictionary with lists
+varsession = {
+    'ordersells': [],
+    'orderbuys': [],
+    'orderhistorysells': [],
+    'orderhistorybuys': [],
+}
 
 def get_websocket_url(http_url):
     if http_url.startswith("https://"):
@@ -105,7 +111,6 @@ def get_websocket_url(http_url):
         return http_url.replace("http://", "ws://")
     else:
         raise ValueError("Invalid URL scheme. Must be http or https.")
-
 
 async def subscribe_to_field(ws_url, query, field, callback):
     while True:
@@ -121,9 +126,11 @@ async def subscribe_to_field(ws_url, query, field, callback):
                             status = item.get('status')
                             signer_id = item.get('signer_id')
                             owner_id = item.get('owner_id')
+                            # Append the order_id to the appropriate list in the session variable
+                            varsession[field].append(order_id)
                             callback(field, order_id, status, signer_id, owner_id)
         except ConnectionClosedError as e:
-            print(f"Connection closed with error: {e}. Reconnecting...")
+            # print(f"Connection closed with error: {e}. Reconnecting...")
             await asyncio.sleep(1)  # Wait before retrying
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -180,8 +187,16 @@ async def get_transactions(callback):
     await asyncio.gather(*tasks)
 
 def handle_update(source, order_id, status, signer_id, owner_id):
-    print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
+    # Assuming session is a global variable
+    global varsession
 
+    # Check if the order_id exists in the history sell and history buys
+    if source in ['orderhistorysells', 'orderhistorybuys']:
+        if order_id in varsession['ordersells'] or order_id in varsession['orderbuys']:
+            print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
+    elif source in ['ordersells', 'orderbuys']:
+        print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
+        
 async def verify_transactions():
     try:
         await get_transactions(handle_update)
