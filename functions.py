@@ -106,6 +106,18 @@ varsession = {
 
 # web socket handle
 def get_websocket_url(http_url):
+    """
+    Converts an HTTP URL to a WebSocket URL by replacing the scheme.
+
+    Args:
+        http_url (str): The HTTP URL to convert.
+
+    Returns:
+        str: The WebSocket URL.
+
+    Raises:
+        ValueError: If the URL scheme is invalid (not http or https).
+    """
     if http_url.startswith("https://"):
         return http_url.replace("https://", "wss://")
     elif http_url.startswith("http://"):
@@ -116,6 +128,29 @@ def get_websocket_url(http_url):
 # suscribe where the graphql query is the subscription and the field is the key of the result
 # storing in a session variable
 async def subscribe_to_field(ws_url, query, field, callback):
+    """
+    Subscribes to a specific field in a WebSocket connection and invokes a callback function
+    whenever a new result is received.
+
+    Args:
+        ws_url (str): The URL of the WebSocket connection.
+        query (str): The query to subscribe to.
+        field (str): The field to monitor in the results.
+        callback (function): The callback function to invoke when a new result is received.
+            The function should accept the following parameters:
+                - field (str): The field being monitored.
+                - order_id (str): The order ID extracted from the result.
+                - status (str): The status extracted from the result.
+                - signer_id (str): The signer ID extracted from the result.
+                - owner_id (str): The owner ID extracted from the result.
+
+    Raises:
+        ConnectionClosedError: If the WebSocket connection is closed unexpectedly.
+        Exception: If any other error occurs during the subscription.
+
+    Returns:
+        None
+    """
     while True:
         try:
             transport = WebsocketsTransport(url=ws_url)
@@ -141,6 +176,15 @@ async def subscribe_to_field(ws_url, query, field, callback):
 
 # graphql to get the transactions
 async def get_transactions(callback):
+    """
+    Subscribes to various GraphQL subscriptions for transaction data and invokes the provided callback function for each received transaction.
+
+    Args:
+        callback (function): The callback function to be invoked for each received transaction.
+
+    Returns:
+        None
+    """
     http_url = os.getenv("URL_SUBGRAPHS_P2P")
     ws_url = get_websocket_url(http_url)
     
@@ -187,12 +231,33 @@ async def get_transactions(callback):
         """)
     }
 
+    # This line of code is a list comprehension in Python, which is a concise way to create lists. It's creating a list of tasks, where each task is a subscription to a field in a WebSocket connection.
+    # The subscribe_to_field function is being called for each field in queries. The arguments passed to subscribe_to_field are:
+    # ws_url: The URL of the WebSocket connection.
+    # queries[field]: The query associated with the current field. queries is a dictionary where the keys are field names and the values are the corresponding queries.
+    # field: The current field name.
+    # callback: A callback function that will be invoked whenever a new result is received from the subscription.
+    # The subscribe_to_field function is asynchronous, which means it returns a coroutine object that can be awaited to get the result. In this case, the result of the function is not being used, but the coroutine objects are being stored in the tasks list. This is likely because the tasks will be run concurrently later using an asyncio function like asyncio.gather(*tasks).
+    # The subscribe_to_field function itself is a loop that continuously subscribes to updates from the WebSocket connection and invokes the callback function whenever a new result is received. If the WebSocket connection is closed unexpectedly, it waits for a second and then tries to reconnect. If any other error occurs, it prints the error message, waits for a second, and then retries.
     tasks = [subscribe_to_field(ws_url, queries[field], field, callback) for field in queries]
     await asyncio.gather(*tasks)
 
 # handle update read the session variables and filter the order_id to search in history or actual
 # is the function thta will send the message to the bot
 def handle_update(source, order_id, status, signer_id, owner_id):
+    """
+    Handle an update for a given order.
+
+    Args:
+        source (str): The source of the update.
+        order_id (str): The ID of the order.
+        status (str): The status of the order.
+        signer_id (str): The ID of the signer.
+        owner_id (str): The ID of the owner.
+
+    Returns:
+        None
+    """
     # Assuming session is a global variable
     global varsession
 
@@ -205,6 +270,12 @@ def handle_update(source, order_id, status, signer_id, owner_id):
         
 # def to verify the transaction        
 async def verify_transactions():
+    """
+    Verifies transactions by calling the `get_transactions` function and handling the update.
+
+    Raises:
+        Exception: If an error occurs during the verification process.
+    """
     try:
         await get_transactions(handle_update)
     except Exception as e: 
