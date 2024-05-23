@@ -1,5 +1,5 @@
 
-import requests, json, os, telebot, sys
+import requests, json, os, telebot, sys, datetime
 from dotenv import load_dotenv
 import asyncio
 from gql import Client, gql
@@ -125,6 +125,8 @@ def get_websocket_url(http_url):
     else:
         raise ValueError("Invalid URL scheme. Must be http or https.")
 
+count = 1
+
 # suscribe where the graphql query is the subscription and the field is the key of the result
 # storing in a session variable
 async def subscribe_to_field(ws_url, query, field, callback):
@@ -151,32 +153,35 @@ async def subscribe_to_field(ws_url, query, field, callback):
     Returns:
         None
     """
+    
     while True:
         try:
             transport = WebsocketsTransport(url=ws_url)
             client = Client(transport=transport, fetch_schema_from_transport=False)
 
+            notifications = []
+            trying_send_msg = True
             async with client as session:
-                notifications = []
                 async for result in session.subscribe(query):
                     if field in result:
                         for item in result[field]:
+                            
                             order_id = item.get('order_id')
                             status = item.get('status')
                             signer_id = item.get('signer_id')
                             owner_id = item.get('owner_id')
                             # Append the order_id to the appropriate list in the session variable
                             try:
-                                add, end = callback(field, order_id)
-                                if add or not end in [None, False]: notifications.append({"type": field, "order_id": order_id, "status": status, "signer_id": signer_id, "owner_id": owner_id})
-                                if add: varsession[field].add(str(order_id))
-                                if not end in [None, False]: varsession[field].remove(end)
+                                add_value, remove_value, remove_field = callback(field, order_id)
+                                if add_value or remove_value: trying_send_msg = False; notifications.append({"type": field, "order_id": order_id, "status": status, "signer_id": signer_id, "owner_id": owner_id})
+                                if add_value: varsession[field].add(str(order_id))
+                                if remove_value: varsession[remove_field].remove(str(order_id))
                             except: generate_err(sys.exc_info())
-                            
-                    print(varsession)
-                    if len(notifications) > 0:
+                    
+                    if len(notifications) > 0 and not trying_send_msg:
+                        trying_send_msg = True
                         wallets = get_chat_id_tg()
-                        for users in notifications:
+                        for i, users in enumerate(notifications):
                             
                             tipo = users.get("type")
                             generator = generate_msg_hist if "history" in tipo else generate_msg_new
@@ -187,18 +192,16 @@ async def subscribe_to_field(ws_url, query, field, callback):
                             for wallet in wallets:
                                 if wallet.get("walletname") in [users.get("owner_id"), users.get("signer_id")]:
                                     data_users.append(wallet)
-                                    
+                            
                             bot = telebot.TeleBot(API_TOKEN)
                             for user in data_users:
                                 bot.send_message(chat_id = user.get("idtelegram"), text = generator(order_id, user.get("walletname"), users.get("status"), tipo))
-                        
-                            
+        
         except ConnectionClosedError as e:
-            # print(f"Connection closed with error: {e}. Reconnecting...")
-            await asyncio.sleep(1)  # Wait before retrying
+            await asyncio.sleep(1) # Wait before retrying
         except Exception as e:
             print(f"An error occurred: {e}")
-            await asyncio.sleep(1)  # Wait before retrying
+            await asyncio.sleep(1) # Wait before retrying
 
 # graphql to get the transactions
 async def get_transactions(callback):
@@ -264,7 +267,7 @@ async def get_transactions(callback):
     # field: The current field name.
     # callback: A callback function that will be invoked whenever a new result is received from the subscription.
     # The subscribe_to_field function is asynchronous, which means it returns a coroutine object that can be awaited to get the result. In this case, the result of the function is not being used, but the coroutine objects are being stored in the tasks list. This is likely because the tasks will be run concurrently later using an asyncio function like asyncio.gather(*tasks).
-    # The subscribe_to_field function itself is a loop that continuously subscribes to updates from the WebSocket connection and invokes the callback function whenever a new result is received. If the WebSocket connection is closed unexpectedly, it waits for a second and then tries to reconnect. If any other error occurs, it prints the error message, waits for a second, and then retries.
+    # The subscribe_to_field function itself is a loop that continuously subscribes to updates from the WebSocket connection and invokes the callback function whenever a new result is received. If the WebSocket connection is closed unexpectedly, it waits for a second and then tries to reconnect. If any other error occurs, it prints the error message, waits for a second, and then retries.    
     tasks = [subscribe_to_field(ws_url, queries[field], field, callback) for field in queries]
     await asyncio.gather(*tasks)
 
@@ -293,31 +296,31 @@ def handle_update(source, order_id):
         # Assuming session is a global variable
         global varsession
         
-        add = False
-        end = None
-        
+        add_value = False
+        remove_value = False
+        remove_field = None
         # Check if the order_id exists in the history sell and history buys
         if source == 'orderhistorysells':
             try:
-                indice = list(varsession['ordersells']).index(order_id)
-                if indice: end = indice
+                remove_field = "ordersells"
+                remove_value = list(varsession[remove_field]).index(str(order_id)) >= 0
             except: pass
-        
+            
         elif source == 'orderhistorybuys':
             try:
-                indice = list(varsession['orderbuys']).index(order_id)
-                if indice: end = indice
+                remove_field = "ordersorderbuysells"
+                remove_value = list(varsession[remove_field]).index(str(order_id)) >= 0
             except: pass
                     
         elif source == 'ordersells':
-            try: indice = list(varsession['ordersells']).index(order_id)
-            except: add = True
+            try: list(varsession['ordersells']).index(str(order_id))
+            except: add_value = True
             
         elif source == 'orderbuys':
-            try: indice = list(varsession['orderbuys']).index(order_id)
-            except: add = True
+            try: list(varsession['orderbuys']).index(str(order_id))
+            except: add_value = True
         
-        return add, end
+        return add_value, remove_value, remove_field
     except Exception as e: raise Exception(e)
         
 # def to verify the transaction        
@@ -328,24 +331,8 @@ async def verify_transactions():
     Raises:
         Exception: If an error occurs during the verification process.
     """
-    try:
-        await get_transactions(handle_update)
-    except Exception as e: 
-        print(f"An error occurred: {e}")
-
-
-def filter_his(type, objects, all_pendings, retorno):
-    obj_by_type = lambda lista: [o.get("order_id") for o in lista if o['tipo'] == type]
-    pendings = obj_by_type(all_pendings)
-    for obj in objects:
-        if obj.get('order_id') in pendings:
-            retorno.append(obj)
-
-def get_historical(objects, all_pendings):
-    retorno = {"orderhistorysells": [], "orderhistorybuys": []}
-    filter_his("sell", objects.get("orderhistorysells"), all_pendings, retorno['orderhistorysells'])
-    filter_his("buy", objects.get("orderhistorybuys"), all_pendings, retorno['orderhistorybuys'])
-    return retorno
+    try: await get_transactions(handle_update)
+    except Exception as e: print(f"An error occurred: {e}")
         
 def generate_msg_hist(order_id, name, status, tipo):
     if status == 3:

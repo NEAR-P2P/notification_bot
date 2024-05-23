@@ -114,3 +114,17 @@ def set_query(pendings, tipo):
 #                 if wallets["chat_signer"]: bot.send_message(chat_id = wallets["chat_signer"], text = generate_msg_hist(wallets.get("order_id"), wallets['wallet_signer'], wallets.get("modify_to"), tipo))
                     
 #     except: generate_err(sys.exc_info())
+
+
+# def filter_his(type, objects, all_pendings, retorno):
+#     obj_by_type = lambda lista: [o.get("order_id") for o in lista if o['tipo'] == type]
+#     pendings = obj_by_type(all_pendings)
+#     for obj in objects:
+#         if obj.get('order_id') in pendings:
+#             retorno.append(obj)
+
+# def get_historical(objects, all_pendings):
+#     retorno = {"orderhistorysells": [], "orderhistorybuys": []}
+#     filter_his("sell", objects.get("orderhistorysells"), all_pendings, retorno['orderhistorysells'])
+#     filter_his("buy", objects.get("orderhistorybuys"), all_pendings, retorno['orderhistorybuys'])
+#     return retorno
