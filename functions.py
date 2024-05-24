@@ -98,9 +98,9 @@ def add_historical(historical_transactions, list_wallet_bot, notify_update_trans
               
 # Initialize a session dictionary with lists
 varsession = {
-    'ordersells': set(),
+    'ordersells': set(["209"]),
     'orderbuys': set(),
-    'orderdisputesells': set(["202"]),
+    'orderdisputesells': set(),
     'orderdisputebuys': set(),
     'orderhistorysells': set(),
     'orderhistorybuys': set(),
@@ -176,7 +176,6 @@ async def subscribe_to_field(ws_url, query, field, callback):
                             try:
                                 if status == 3 and not "history" in field: field = "orderdisputebuys" if "buys" in field else "orderdisputesells"
                                 add_value, remove_value, remove_field = callback(field, order_id, status)
-                                if int(order_id) > 195: print(notifications)
                                 if add_value or remove_value: trying_send_msg = False; notifications.append({"type": field, "order_id": order_id, "status": status, "signer_id": signer_id, "owner_id": owner_id})
                                 if add_value: varsession[field].add(str(order_id))
                                 if remove_value: varsession[remove_field].remove(str(order_id))
@@ -188,7 +187,13 @@ async def subscribe_to_field(ws_url, query, field, callback):
                         for i, users in enumerate(notifications):
                             
                             tipo = users.get("type")
-                            generator = generate_msg_hist if "history" in tipo or "dispute" in tipo else generate_msg_new
+                            
+                            end_dispute = False
+                            if "history" in tipo or "dispute" in tipo:
+                                end_dispute = "history" in tipo
+                                generator = generate_msg_hist
+                            else: generator = generate_msg_new
+                            
                             if "sells" in tipo: tipo = "venta"
                             elif "buys" in tipo: tipo = "compra"
                             
@@ -199,7 +204,7 @@ async def subscribe_to_field(ws_url, query, field, callback):
                             
                             bot = telebot.TeleBot(API_TOKEN)
                             for user in data_users:
-                                bot.send_message(chat_id = user.get("idtelegram"), text = generator(users.get("order_id"), user.get("walletname"), users.get("status"), tipo, True))
+                                bot.send_message(chat_id = user.get("idtelegram"), text = generator(users.get("order_id"), user.get("walletname"), users.get("status"), tipo, end_dispute))
                     
         
         except ConnectionClosedError as e:
@@ -307,13 +312,13 @@ def handle_update(source, order_id, status):
         # Check if the order_id exists in the history sell and history buys
         if source in ['orderhistorysells', 'orderdisputesells']:
             try:
-                remove_field = "orderdisputesells" if "history" in source else "ordersells"
+                remove_field = "orderdisputesells" if status == 3 and "history" in source else "ordersells"
                 remove_value = list(varsession[remove_field]).index(str(order_id)) >= 0
             except: pass
             
         elif source in ['orderhistorybuys', 'orderdisputebuys']:
             try:
-                remove_field = "orderdisputebuys" if "history" in source else "orderbuys"
+                remove_field = "orderdisputebuys" if status == 3 and "history" in source else "orderbuys"
                 remove_value = list(varsession[remove_field]).index(str(order_id)) >= 0
             except: pass
                     
