@@ -98,7 +98,7 @@ def add_historical(historical_transactions, list_wallet_bot, notify_update_trans
               
 # Initialize a session dictionary with lists
 varsession = {
-    'ordersells': set(["209"]),
+    'ordersells': set(),
     'orderbuys': set(),
     'orderdisputesells': set(),
     'orderdisputebuys': set(),
