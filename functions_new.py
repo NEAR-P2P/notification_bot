@@ -281,7 +281,7 @@ def handle_update(source, order_id, status, signer_id, owner_id):
     # Get the user chatid
     # Avoid multiple requests to the API
     # print("api chat id", chat_session.get('api_chat_id'))
-    if chat_session.get('api_chat_id') is None:
+    if chat_session.get('api_chat_id_signer') is None:
         params = {
             "walletname": signer_id
         }
@@ -292,7 +292,20 @@ def handle_update(source, order_id, status, signer_id, owner_id):
             json=params
         ).json()
 
-        chat_session['api_chat_id'] = response.get("data")[0].get("idtelegram")
+        chat_session['api_chat_id_signer'] = response.get("data")[0].get("idtelegram")
+
+    if chat_session.get('api_chat_id_owner') is None:
+        params = {
+            "walletname": owner_id
+        }
+
+        response = requests.post(
+            os.getenv("URL_LIST_WALLET_BOT"), 
+            headers={'Content-type': 'application/json'}, 
+            json=params
+        ).json()
+
+        chat_session['api_chat_id_owner'] = response.get("data")[0].get("idtelegram")    
 
     # print(chat_session['api_chat_id'])
 
@@ -300,7 +313,8 @@ def handle_update(source, order_id, status, signer_id, owner_id):
         if order_id in varsession['ordersells'] or order_id in varsession['orderbuys']:
             if 'counterNumberHistory' in counter and counter['counterNumberHistory'] == 0:
                 # print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
-                bot.send_message(chat_id = chat_session['api_chat_id'], text = generate_msg_hist(order_id, signer_id, status, type))
+                bot.send_message(chat_id = chat_session['api_chat_id_signer'], text = generate_msg_hist(order_id, signer_id, status, type))
+                bot.send_message(chat_id = chat_session['api_chat_id_owner'], text = generate_msg_hist(order_id, signer_id, status, type))
                 counter['counterNumberHistory'] = 1
                 counter['counterNumber'] = 0
             # Remove the session Variable order id
@@ -318,7 +332,8 @@ def handle_update(source, order_id, status, signer_id, owner_id):
             counter['counterNumberDispute'] = 1
         if 'counterNumber' in counter and counter['counterNumber'] == 0:
             # print(f"Source: {source}, Order ID: {order_id}, Status: {status}", f"Signer ID: {signer_id}, Owner ID: {owner_id}")
-            bot.send_message(chat_id = chat_session['api_chat_id'], text = generate_msg_new(order_id, signer_id, type, status))
+            bot.send_message(chat_id = chat_session['api_chat_id_signer'], text = generate_msg_new(order_id, signer_id, type, status))
+            bot.send_message(chat_id = chat_session['api_chat_id_owner'], text = generate_msg_new(order_id, signer_id, type, status))
             counter['counterNumber'] = 1  
             counter['counterNumberHistory'] = 0
     # print(counter)        
@@ -397,8 +412,8 @@ def generate_msg_hist(order_id, name, to_modify, tipo):
         return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} ha finalizado con éxito."
     elif to_modify == 4:
         return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha sido cancelada."
-    
-    return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} ha finalizado con éxito."
+    else:
+        return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} ha finalizado con éxito."
 
 def generate_msg_new(order_id, name, tipo, status):
     if status == 3:
