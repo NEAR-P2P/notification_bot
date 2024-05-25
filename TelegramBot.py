@@ -165,7 +165,7 @@ def deleteWallet(m):
         # Create the keyboard markup
         reply_markup = InlineKeyboardMarkup(buttons)
         bot.send_message(cid, help_text, reply_markup=reply_markup)
-        bot.register_next_step_handler_by_chat_id(cid, deleteWalletActions)
+        # bot.register_next_step_handler_by_chat_id(cid, deleteWalletActions)
         
         # markup = types.ReplyKeyboardMarkup()
         # itemc = types.KeyboardButton('CANCEL')
