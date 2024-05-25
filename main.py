@@ -1,5 +1,5 @@
 import asyncio
-from functions import verify_transactions
+from functions_new import verify_transactions
 
 async def app_notifications():
     while True:
