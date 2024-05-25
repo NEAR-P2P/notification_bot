@@ -348,11 +348,11 @@ def generate_msg_hist(order_id, name, status, tipo, end_dipute = False):
     # if end_dipute:
     #     return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha entrado en disputa, por favor verificar o contactar a soporte https://t.me/nearp2p."
     if status == 3 and not end_dipute:
-        return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha entrado en disputa, por favor verificar o contactar a soporte https://t.me/nearp2p."
+        return f"Orden de {tipo} N°{order_id} de la wallet\n \n**{name}**\n \nHa entrado en disputa, por favor verificar o contactar a soporte \n \n https://t.me/nearp2p."
     elif status == 4:
-        return f"Orden de {tipo} N°{order_id} de la wallet **{name}** ha sido cancelada."
+        return f"Orden de {tipo} N°{order_id} de la wallet\n \n**{name}**\n \nHa sido cancelada."
     
     return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} ha finalizado con éxito."
 
 def generate_msg_new(order_id, name, status, tipo, end_dipute = False):
-    return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para **{name}** por favor verificar."
+    return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para\n \n**{name}**\n \npor favor verificar.\n \n {os.getenv('URL_WALLET_P2P_AREPITA')}"
