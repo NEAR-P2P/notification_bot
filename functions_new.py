@@ -182,7 +182,7 @@ async def subscribe_to_field(ws_url, query, field, callback):
             # print(f"Connection closed with error: {e}. Reconnecting...")
             await asyncio.sleep(1)  # Wait before retrying
         except Exception as e:
-            print(f"An error occurred: {e}")
+            print(f"An error occurred when connecting to {ws_url}: {e}")
             await asyncio.sleep(1)  # Wait before retrying
 
 # graphql to get the transactions
