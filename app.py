@@ -2,8 +2,14 @@ from flask import Flask, request, jsonify
 import logging
 from logging.handlers import RotatingFileHandler
 import functions_new
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_cors import CORS
 
 app = Flask(__name__)
+limiter = Limiter(app=app, key_func=get_remote_address)
+# Set up CORS
+CORS(app, resources={r"/handle_update": {"origins": "*"}})
 
 # Set up logging
 handler = RotatingFileHandler('error.log', maxBytes=10000, backupCount=1)
@@ -11,6 +17,7 @@ handler.setLevel(logging.ERROR)
 app.logger.addHandler(handler)
 
 @app.route('/handle_update', methods=['POST'])
+@limiter.limit("5 per minute")  # Limit to 5 requests per minute per IP
 def handle_update():
     try:
         data = request.get_json()
