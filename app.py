@@ -9,7 +9,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 limiter = Limiter(app=app, key_func=get_remote_address)
 # Set up CORS
-CORS(app, resources={r"/handle_update": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}})
+# CORS(app, resources={r"/*": {"origins": ["https://mi.arepa.digital", "https://another.allowed.origin"]}})
 
 # Set up logging
 handler = RotatingFileHandler('error.log', maxBytes=10000, backupCount=1)
@@ -46,3 +47,4 @@ def handle_update():
 
 if __name__ == '__main__':
     app.run(debug=True)
+    

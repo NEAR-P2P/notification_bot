@@ -59,4 +59,4 @@ def generate_msg_new(order_id, name, tipo, status):
     elif status == 5:
         return f"🥳 Felicitaciones su orden de {tipo} N°{order_id} ha finalizado con éxito."   
     else:
-        return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para\n \n**{name}**\n \npor favor verificar.\n\n{os.getenv('URL_WALLET_P2P_AREPITA')}\n\nTambién pude verificar en NEAR P2P\n\n{os.getenv('URL_NEAR_P2P')}"
+        return f"Se ha generado la orden de {tipo} N°{order_id} de intercambio para\n \n**{name}**\n \npor favor verificar."
