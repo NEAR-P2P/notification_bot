@@ -5,9 +5,18 @@ from subprocess import Popen
 import sys
 import time
 
-filename = sys.argv[1]
+filenames = sys.argv[1:]  # Accept multiple filenames as arguments
+processes = []
+
 while True:
-    print("\nEn ejecución archivo " + filename)
-    p = Popen("python3 " + filename, shell=True)
-    p.wait()
+    for filename in filenames:
+        print("\nEn ejecución archivo " + filename)
+        p = Popen("python3 " + filename, shell=True)
+        processes.append(p)
+
+    # Wait for all processes to finish
+    for p in processes:
+        p.wait()
+
+    # Restart after a delay
     time.sleep(30)
