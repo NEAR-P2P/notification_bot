@@ -218,14 +218,24 @@ def listWallets(m):
         None
     """
     cid = m.chat.id
-    
     bot.send_message(cid, "*Lista de wallets agregadas:*", parse_mode='Markdown')
     
-    response_data = requests.post(os.getenv("URL_LIST_WALLET_BOT"), data=json.dumps({"idtelegram": str(cid)}), headers={'Content-type': 'application/json'}).json()
-    if 'data' in response_data:
-        for item in response_data['data']:
-            bot.send_message(cid, f"*Wallet:* {str(item['walletname'])}", parse_mode='Markdown')
-    else: print("No 'data' in response")
+    try:
+        response = requests.post(os.getenv("URL_LIST_WALLET_BOT"), data=json.dumps({"idtelegram": str(cid)}), headers={'Content-type': 'application/json'})
+        if response.status_code == 200:
+            response_data = response.json()
+            if 'data' in response_data:
+                for item in response_data['data']:
+                    bot.send_message(cid, f"*Wallet:* {str(item['walletname'])}", parse_mode='Markdown')
+            else:
+                bot.send_message(cid, "No wallets found.", parse_mode='Markdown')
+        else:
+            bot.send_message(cid, f"API Error: {response.status_code} - {response.text}", parse_mode='Markdown')
+    except requests.exceptions.JSONDecodeError:
+        bot.send_message(cid, "Error: Invalid response from API.", parse_mode='Markdown')
+    except Exception as e:
+        bot.send_message(cid, f"Unexpected error: {str(e)}", parse_mode='Markdown')
+    
     markup = types.ReplyKeyboardMarkup()
     item = types.KeyboardButton('/list')
     markup.row(item)

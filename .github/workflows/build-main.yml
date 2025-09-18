@@ -1,0 +1,34 @@
+name: Build and Push Docker image
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Chequear el código del repositorio
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Loguearse en Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 3. Construir y etiquetar la imagen de Docker
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/nearp2p-bot:latest .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/nearp2p-bot:latest ${{ secrets.DOCKER_USERNAME }}/nearp2p-bot:${{ github.sha }}
+
+      # 4. Subir la imagen a Docker Hub
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/nearp2p-bot:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/nearp2p-bot:${{ github.sha }}
