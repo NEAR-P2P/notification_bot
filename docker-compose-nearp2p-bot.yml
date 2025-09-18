@@ -1,0 +1,31 @@
+services:
+  nearp2p-bot:
+    image: metademocracia1/nearp2p-bot:latest
+    container_name: nearp2p-bot
+    restart: always
+    env_file: ".env"
+    volumes:
+      - .env:/app/.env
+    ports:
+      - "8010:8010"
+    networks:
+      - proxy_net
+
+  watchtower-nearp2p-bots:
+    image: containrrr/watchtower
+    container_name: watchtower-latest
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=30
+    networks:
+      - app-network
+
+networks:
+  proxy_net:
+    external: true
+  app-network:
+    # Define as needed, e.g., driver: bridge, or external: true if it exists
+    driver: bridge
