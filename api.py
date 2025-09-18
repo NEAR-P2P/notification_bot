@@ -45,6 +45,6 @@ def handle_update():
         app.logger.error('An error occurred: %s', e)
         return jsonify({"error": "Internal Server Error"}), 500
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
     
